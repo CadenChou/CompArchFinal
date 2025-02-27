@@ -35,4 +35,3 @@ target_include_directories(systemc INTERFACE "${SCONS_SOURCE_DIR}/src/systemc/ex
 
 add_library(SystemC::systemc ALIAS systemc)
 
-add_subdirectory(DRAMSys)
