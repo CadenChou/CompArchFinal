@@ -51,6 +51,7 @@ class IntMultDiv(FUDesc):
     opList = [
         OpDesc(opClass="IntMult", opLat=3),
         OpDesc(opClass="IntDiv", opLat=20, pipelined=False),
+        OpDesc(opClass="ZeroMult", opLat=1),
     ]
 
     count = 2
@@ -58,8 +59,9 @@ class IntMultDiv(FUDesc):
 
 class IntMultDivUnit(FUDesc):
     opList = [
-        OpDesc(opClass="IntMult", opLat=3),
+        OpDesc(opClass="IntMult", opLat=250, pipelined=False),
         OpDesc(opClass="IntDiv", opLat=250, pipelined=False),
+        OpDesc(opClass="ZeroMult", opLat=1),
     ]
 
     count = 2
@@ -80,6 +82,7 @@ class FP_MultDiv(FUDesc):
         OpDesc(opClass="FloatMisc", opLat=3),
         OpDesc(opClass="FloatDiv", opLat=12, pipelined=False),
         OpDesc(opClass="FloatSqrt", opLat=24, pipelined=False),
+        OpDesc(opClass="ZeroMult", opLat=3)
     ]
     count = 2
 

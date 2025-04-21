@@ -70,18 +70,86 @@
     // to track speculative predictionas
 
     PredHistPtrContainer *phpc = new PredHistPtrContainer;
-
+    
+    
     // Call the local predictor to see what it predict
     // (the predictor will also update its internal state)
+    // ! Do this also for all 5 bps
     bool localPred = localBP->lookup(tid, pc, phpc->localHist);
+    bool tournamentPred = tournamentBP->lookup(tid, pc, phpc->tournamentHist);
+    bool bimodePred = bimodeBP->lookup(tid, pc, phpc->bimodeHist);
+    bool tagePred = tageBP->lookup(tid, pc, phpc->tageHist);
+    bool perceptronPred = perceptronBP->lookup(tid, pc, phpc->perceptronHist);
     phpc->localPred = localPred;
+    phpc->tournamentPred = tournamentPred;
+    phpc->bimodePred = bimodePred;
+    phpc->tagePred = tagePred;
+    phpc->perceptronPred = perceptronPred;
+    
 
     // Set pointer that will get passed back in subsequent calls for this branch
     bp_history = phpc;
 
-    // We're returning the local predictor's choice, so update stats accordingly
-    stats.localPreds++;
-    return localPred;
+    // Find best predictor using accuracyHistory
+    // Get the accuracy histories for each bp for this branch
+    BranchAccuracy* curBranchAcc = &accuracyHistory[pc];
+    // Create an array of deque pointers that we can loop over
+    std::deque<bool>* histories[NumBps] = {
+        &curBranchAcc->local,
+        &curBranchAcc->tournament,
+        &curBranchAcc->bimode,
+        &curBranchAcc->tage,
+        &curBranchAcc->perceptron
+    };
+
+    bool finalPred;
+
+    int curInitCounter = initCounters[pc];
+
+    // Warm up period for 
+    if (curInitCounter < HistoryWindow) {
+        int predictor = curInitCounter % NumBps;
+        initCounters[pc]++;
+        switch (predictor) {
+            case 0: finalPred = phpc->localPred; stats.localPreds++; break;
+            case 1: finalPred = phpc->tournamentPred; stats.tournamentPreds++; break;
+            case 2: finalPred = phpc->bimodePred; stats.bimodePreds++; break;
+            case 3: finalPred = phpc->tagePred; stats.tagePreds++; break;
+            case 4: finalPred = phpc->perceptronPred; stats.perceptronPreds++; break;
+            default: finalPred = phpc->tagePred; stats.tagePreds++; break;
+        }
+    } else {
+        // For each bp, calculate its accuracy based on recent history
+        int bestPredictor = 0;
+        double bestAcc = 0.0;
+        for (int i = 0; i < NumBps; i++) {
+            auto curDq = histories[i];
+            int correct = 0;
+            // For each outcome in *curDq
+            for (bool outcome : *curDq) {
+                if (outcome) correct++;
+            }
+            // Avoid dividing by 0
+            double curAcc = curDq->empty() ? 0.0 : (double)correct / curDq->size();
+            if (curAcc > bestAcc) {
+                bestAcc = curAcc;
+                bestPredictor = i;
+            }
+        }
+
+        switch (bestPredictor) {
+            case 0: finalPred = phpc->localPred; stats.localPreds++; break;
+            case 1: finalPred = phpc->tournamentPred; stats.tournamentPreds++; break;
+            case 2: finalPred = phpc->bimodePred; stats.bimodePreds++; break;
+            case 3: finalPred = phpc->tagePred; stats.tagePreds++; break;
+            case 4: finalPred = phpc->perceptronPred; stats.perceptronPreds++; break;
+            default: finalPred = phpc->tagePred; stats.tagePreds++; break;
+        }
+    }
+    
+    
+    
+    return finalPred;
 
  }
  
@@ -106,6 +174,10 @@
     }
 
     localBP->updateHistories(tid, pc, uncond, taken, target, phpc->localHist);
+    tournamentBP->updateHistories(tid, pc, uncond, taken, target, phpc->tournamentHist);
+    bimodeBP->updateHistories(tid, pc, uncond, taken, target, phpc->bimodeHist);
+    tageBP->updateHistories(tid, pc, uncond, taken, target, phpc->tageHist);
+    perceptronBP->updateHistories(tid, pc, uncond, taken, target, phpc->perceptronHist);
 }
  
  
@@ -115,16 +187,42 @@
                       const StaticInstPtr & inst, Addr target)
  {
     // This is an update for the outcome of a previously predicted instruction
-    assert(bp_history);
+    // assert(bp_history);
+
+    if (!bp_history) {
+        return;
+    }
+
 
     PredHistPtrContainer *phpc = static_cast<PredHistPtrContainer *>(bp_history);
 
     localBP->update(tid, pc, taken, phpc->localHist, squashed, inst, target);
+    tournamentBP->update(tid, pc, taken, phpc->tournamentHist, squashed, inst, target);
+    bimodeBP->update(tid, pc, taken, phpc->bimodeHist, squashed, inst, target);
+    tageBP->update(tid, pc, taken, phpc->tageHist, squashed, inst, target);
+    perceptronBP->update(tid, pc, taken, phpc->perceptronHist, squashed, inst, target);
 
     if (squashed) {
         // TODO: restore decision state if needed
-        return; // avoid double-free for instructions that were already squashed
+        return;
     }
+
+    BranchAccuracy* curBranchAcc = &accuracyHistory[pc];
+
+    // For each bp, get rid of oldest history if history window is exceeded
+    if (curBranchAcc->local.size() >= HistoryWindow) curBranchAcc->local.pop_front();
+    if (curBranchAcc->tournament.size() >= HistoryWindow) curBranchAcc->tournament.pop_front();
+    if (curBranchAcc->bimode.size() >= HistoryWindow) curBranchAcc->bimode.pop_front();
+    if (curBranchAcc->tage.size() >= HistoryWindow) curBranchAcc->tage.pop_front();
+    if (curBranchAcc->perceptron.size() >= HistoryWindow) curBranchAcc->perceptron.pop_front();
+
+    // For each bp, push most recent prediction history
+    // See whether prediction for each bp was correct
+    curBranchAcc->local.push_back(phpc->localPred == taken);
+    curBranchAcc->tournament.push_back(phpc->tournamentPred == taken);
+    curBranchAcc->bimode.push_back(phpc->bimodePred == taken);
+    curBranchAcc->tage.push_back(phpc->tagePred == taken);
+    curBranchAcc->perceptron.push_back(phpc->perceptronPred == taken);
 
     // predictor should have deleted this history; safe to delete container
     assert(!phpc->localHist);
@@ -136,15 +234,26 @@
  void
  HybridBP::squash(ThreadID tid, void * &bp_history)
  {
-    assert(bp_history);
+    // Add a check for null bp_history
+    if (!bp_history) {
+        return;  // Nothing to squash if bp_history is null
+    }
     PredHistPtrContainer *phpc = static_cast<PredHistPtrContainer *>(bp_history);
     
     // TODO: restore decision state if needed
     
     localBP->squash(tid, phpc->localHist);
+    tournamentBP->squash(tid, phpc->tournamentHist);
+    bimodeBP->squash(tid, phpc->bimodeHist);
+    tageBP->squash(tid, phpc->tageHist);
+    perceptronBP->squash(tid, phpc->perceptronHist);
     
     // predictor should have deleted this history; safe to delete container
     assert(!phpc->localHist);
+    assert(!phpc->tournamentHist);
+    assert(!phpc->bimodeHist);
+    assert(!phpc->tageHist);
+    assert(!phpc->perceptronHist);
     delete phpc;
     bp_history = nullptr;
  }

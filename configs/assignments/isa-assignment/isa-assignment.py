@@ -41,12 +41,13 @@ args = SimpleOpts.parse_args()
 system = System()
 
 system.clk_domain = SrcClockDomain()
-system.clk_domain.clock = "1GHz"
+system.clk_domain.clock = "50MHz"
 system.clk_domain.voltage_domain = VoltageDomain()
 
 system.mem_mode = "timing"
 system.mem_ranges = [AddrRange("512MB")]
-system.cpu = RiscvO3CPU1952y()
+# system.cpu = RiscvO3CPU1952y()
+system.cpu = RiscvO3CPU()
 
 system.membus = SystemXBar()
 

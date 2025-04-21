@@ -1,0 +1,24 @@
+build/RISCV/gem5.debug     configs/assignments/branchpred/bp-assignment.py     /home/cs1952y-user/gem5/tests/test-progs/microbench-riscv/CCa_bench.RISCV     --branchpred=hybrid
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 23.1.0.0
+gem5 compiled Apr  6 2025 00:01:22
+gem5 started Apr  6 2025 01:08:01
+gem5 executing on da78469ef076, pid 2518
+command line: build/RISCV/gem5.debug configs/assignments/branchpred/bp-assignment.py /home/cs1952y-user/gem5/tests/test-progs/microbench-riscv/CCa_bench.RISCV --branchpred=hybrid
+
+Global frequency set at 1000000000000 ticks per second
+warn: No dot file generated. Please install pydot to generate the dot file and pdf.
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (8192 Mbytes) does not match the address range assigned (512 Mbytes)
+AttributeError: module 'm5.internal.params' has no attribute 'HybridBPParams'
+
+At:
+  src/python/m5/SimObject.py(1187): getCCParams
+  src/python/m5/SimObject.py(1246): getCCObject
+  src/python/m5/SimObject.py(1270): getValue
+  src/python/m5/SimObject.py(1202): getCCParams
+  src/python/m5/SimObject.py(1266): createCCObject
+  src/python/m5/simulate.py(135): instantiate
+  configs/assignments/branchpred/bp-assignment.py(104): <module>
+  src/python/m5/main.py(669): main

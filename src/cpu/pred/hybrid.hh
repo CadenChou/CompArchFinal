@@ -39,29 +39,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- #ifndef __CPU_PRED_HYBRID_PRED_HH__
- #define __CPU_PRED_HYBRID_PRED_HH__
- 
- #include "base/types.hh"
- #include "cpu/pred/bpred_unit.hh"
- #include "cpu/pred/2bit_local.hh"
- #include "cpu/pred/tournament.hh"
- #include "cpu/pred/bi_mode.hh"
- #include "cpu/pred/multiperspective_perceptron_8KB.hh"
- #include "cpu/pred/ltage.hh"
- #include "params/HybridBP.hh"
- 
- namespace gem5
- {
- 
- namespace branch_prediction
- {
- 
- class HybridBP : public BPredUnit
- {
-  public:
+#ifndef __CPU_PRED_HYBRID_PRED_HH__
+#define __CPU_PRED_HYBRID_PRED_HH__
+
+#include <deque>
+#include <unordered_map>
+
+#include "base/types.hh"
+#include "cpu/pred/bpred_unit.hh"
+#include "params/HybridBP.hh"
+#include "cpu/pred/2bit_local.hh"
+#include "cpu/pred/tournament.hh"
+#include "cpu/pred/bi_mode.hh"
+#include "cpu/pred/multiperspective_perceptron_8KB.hh"
+#include "cpu/pred/ltage.hh"
+
+namespace gem5
+{
+
+namespace branch_prediction
+{
+
+class HybridBP : public BPredUnit
+{
+ public:
     HybridBP(const HybridBPParams &params);
- 
+
     // Base class methods.
     bool lookup(ThreadID tid, Addr pc, void* &bp_history) override;
     void updateHistories(ThreadID tid, Addr pc, bool uncond, bool taken,
@@ -70,18 +73,49 @@
                 void * &bp_history, bool squashed,
                 const StaticInstPtr & inst, Addr target) override;
     void squash(ThreadID tid, void * &bp_history) override;
- 
-  private:  
+
+ private:  
     struct PredHistPtrContainer {
       void* localHist = nullptr;
+      void* tournamentHist = nullptr;
+      void* bimodeHist = nullptr;
+      void* tageHist = nullptr;
+      void* perceptronHist = nullptr;
+
       bool localPred = false;
+      bool tournamentPred = false;
+      bool bimodePred = false;
+      bool tagePred = false;
+      bool perceptronPred = false;
     };
     
     LocalBP *localBP;
     TournamentBP *tournamentBP;
     BiModeBP *bimodeBP;
-    MultiperspectivePerceptron8KB *perceptronBP;
     LTAGE *tageBP;
+    MultiperspectivePerceptron8KB *perceptronBP;
+    
+
+    // ! Used to keep track of best performing bp, for each branch
+    struct BranchAccuracy {
+      std::deque<bool> local;
+      std::deque<bool> tournament;
+      std::deque<bool> bimode;
+      std::deque<bool> tage;
+      std::deque<bool> perceptron;
+    };
+
+    // ! How much history to keep
+    static const int HistoryWindow = 8;
+
+    // ! Number of bps
+    static const int NumBps = 5;
+
+    // ! Maps pc (a specific branch) to the histories of each bp
+    std::unordered_map<Addr, BranchAccuracy> accuracyHistory;
+
+    // ! Maps pc (a specific branch) to init counter
+    std::unordered_map<Addr, int> initCounters;
 
     protected:
     struct HybridBPStats : public statistics::Group
@@ -93,10 +127,11 @@
         statistics::Scalar tagePreds;
         statistics::Scalar perceptronPreds;
     } stats;
- };
- 
- } // namespace branch_prediction
- } // namespace gem5
- 
- #endif // __CPU_PRED_HYBRID_PRED_HH__
- 
+};
+
+
+} // namespace branch_prediction
+} // namespace gem5
+
+#endif // __CPU_PRED_HYBRID_PRED_HH__
+

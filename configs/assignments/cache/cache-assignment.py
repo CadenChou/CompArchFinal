@@ -104,8 +104,10 @@ system.cpu.dcache.connectBus(system.l2bus)
 
 # Create an L2 cache and connect it to the l2bus
 if (args.control):
+    print("using control cache")
     system.l2cache = L2Cache(args)
 else:
+    print("using student cache")
     system.l2cache = MicroL2Cache(args)
 system.l2cache.connectCPUSideBus(system.l2bus)
 

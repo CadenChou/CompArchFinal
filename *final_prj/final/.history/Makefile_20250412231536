@@ -1,0 +1,52 @@
+# === Configurable Variables ===
+CXX := g++
+CXXFLAGS := -std=c++11 -O2 -Wall
+TARGET := transformer_block
+
+SRC := main.cc TransformerBlock.cc
+HEADERS := TransformerBlock.hh
+
+# === Default target ===
+all: $(TARGET)
+
+# === Link object files into executable ===
+$(TARGET): $(SRC) $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
+
+# === Clean up build artifacts ===
+clean:
+	rm -f $(TARGET)
+
+# === Run the binary ===
+run: $(TARGET)
+	./$(TARGET)
+
+.PHONY: all clean run
+
+
+# ----------------------------------------------------------
+
+# === Configurable Variables ===
+CXX := g++
+CXXFLAGS := -std=c++11 -O2 -Wall
+TARGET := transformer_block
+
+SRC := main.cc TransformerBlockMT.cc
+HEADERS := TransformerBlockMT.hh
+
+# === Default target ===
+all: $(TARGET)
+
+# === Link object files into executable ===
+$(TARGET): $(SRC) $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
+
+# === Clean up build artifacts ===
+clean:
+	rm -f $(TARGET)
+
+# === Run the binary ===
+run: $(TARGET)
+	./$(TARGET)
+
+.PHONY: all clean run

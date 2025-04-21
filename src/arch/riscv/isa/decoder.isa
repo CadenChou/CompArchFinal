@@ -1693,6 +1693,9 @@ decode QUADRANT default Unknown::unknown() {
                         0x0: sllw({{
                             Rd_sd = Rs1_sw << Rs2<4:0>;
                         }});
+                        0x1: zmul({{
+                            Rd_sd = 0;
+                        }}, ZeroMultOp);
                         0x30: rolw({{
                             int shamt = Rs2 & (32 - 1);
                             Rd = (int32_t) ((Rs1_uw << shamt) | (Rs1_uw >> ((32 - shamt) & (32 - 1))));
