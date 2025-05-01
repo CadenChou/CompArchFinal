@@ -1,0 +1,4 @@
+system.cpu0.numCycles                        12884557                       # Number of cpu cycles simulated (Cycle)
+system.cpu1.numCycles                          100525                       # Number of cpu cycles simulated (Cycle)
+system.cpu2.numCycles                           94946                       # Number of cpu cycles simulated (Cycle)
+system.cpu3.numCycles                           84410                       # Number of cpu cycles simulated (Cycle)
